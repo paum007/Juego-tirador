@@ -3,27 +3,28 @@ from random import randint
 from time import time as timer
 
 
-# clase padre para otros objetos
+# Parent class for other objects
 class GameSprite(sprite.Sprite):
-    # constructor de clase
-    def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed):
-        # llamamos al constructor de la clase (Sprite):
+    # Constructor of the class
+    def __init__(self, img_player, player_x, player_y, size_x, size_y, player_speed):
+        # calling the Sprite class constructor:
         sprite.Sprite.__init__(self)
-        # cada objeto debe almacenar una propiedad image
-        self.image = transform.scale(image.load(player_image), (size_x, size_y))
+        # each object stores an 'image' property
+        self.image = transform.scale(image.load(img_player), (size_x, size_y))
         self.speed = player_speed
-        # cada objeto debe almacenar la propiedad rect en la cual está inscrito
+        # each object stores a 'rect' property defining its position
         self.rect = self.image.get_rect()
         self.rect.x = player_x
         self.rect.y = player_y
-    # método que dibuja al personaje en la ventana
+
+    # method that draws the character on the screen
     def reset(self):
         window.blit(self.image, (self.rect.x, self.rect.y))
 
 
-# clase del jugador principal
+# Player class
 class Player(GameSprite):
-    # movimiento del jugador
+    # player movement
     def update(self):
         keys = key.get_pressed()
         if keys[K_a] and self.rect.x > 5:
@@ -38,50 +39,51 @@ class Player(GameSprite):
     def fire(self):
         bullet = Bullet(img_bullet, self.rect.centerx, self.rect.top, 15, 20, -15)
         Bullets.add(bullet)
+        mixer.Sound(snd_bullet).play()
 
 
 lost = 0
 
-#calse del enemigo
+# Enemy class
 class Enemy(GameSprite):
-    #movimiento del enemigo
+    # enemy movement
     def update(self):
         self.rect.y += self.speed
         global lost
-        #para desaparecer cuando llege el borde de la pantalla
+        # when the enemy reaches the bottom of the screen, reset its position and increment lost count
         if self.rect.y > win_height:
             self.rect.x = randint(80, win_width - 80)
             self.rect.y = 0
             lost = lost + 1
 
-#clase de la bala 
+# Bullet class
 class Bullet(GameSprite):
-    #movimiento de la bala
+    # bullet movement
     def update(self):
         self.rect.y += self.speed
-        #para desaparecer cuando llege al borde
+        # to disappear when it reaches the top of the screen
         if self.rect.y < 0:
             self.kill()
 
-#escena del juego:
+# Game scene:
 win_width = 900
 win_height = 600
 window = display.set_mode((win_width, win_height))
-#imágenes
-img_background = "pixel spiral galaxy.png"
-img_player = "Nave2.png"
-img_enemy = "enemy.gif"
-img_bullet = "bullet.png"
-img_ast = "asteroide.png"
-#sonido
-snd_background = "Voxel-Revolution.ogg"
-snd_bullet = "fire.ogg"
+# images
+img_background = "Images/pixel spiral galaxy.png"
+img_player = "Images/Nave2.png"
+img_enemy = "Images/enemy.gif"
+img_bullet = "Images/bullet.png"
+img_ast = "Images/asteroide.png"
+# sound
+snd_background = "Sounds/Voxel-Revolution.ogg"
+snd_bullet = "Sounds/pewpew.ogg"
 
 display.set_caption("Galaxy")
 background = transform.scale(image.load(img_background), (win_width, win_height))
 
 
-#música y efectos
+# music and effects
 mixer.init()
 mixer.music.load(snd_background)
 mixer.music.set_volume(0.3)
@@ -95,17 +97,23 @@ max_lost = 3
 goal = 10
 
 
-#creando fuentes
+# creating fonts
 font.init()
-font2 = font.SysFont('Arial', 36)
+# Load custom pixel font
+pixel_font = font.Font("Fonts/pixel.ttf", 10)     # for normal size
+pixel_font_big = font.Font("Fonts/pixel.ttf", 70)   # for big text like "Perdiste"
 
-font3 = font.SysFont('Arial', 100)
+font2 = pixel_font
+font3 = pixel_font_big
+
+lose = font3.render("You Lose!", 1, (224, 0, 0))
+win = font3.render("You Win!", 3, (27, 181, 30))
+
+win_rect = win.get_rect(center=(win_width // 2, win_height // 2))
+lose_rect = lose.get_rect(center=(win_width // 2, win_height // 2))
 
 
-lose = font3.render("Perdiste ", 1, (224, 0, 0))
-win = font3.render("Ganaste ", 3, (27, 181, 30))
-
-#jugador y objetos
+# player and objects
 player = Player(img_player, 5, win_height - 115, 105, 106, 6)
 
 Alien = sprite.Group()
@@ -117,14 +125,14 @@ Bullets = sprite.Group()
 
 
 asteroids = sprite.Group() 
-for i in range(1,3):
+for i in range(1, 3):
     asteroid = Enemy(img_ast, randint(30, win_width - 30), -40, 80, 50, randint(1, 7))
     asteroids.add(asteroid)
 
 num_fire = 0 
 rel_time = False
 
-#bucle para que funcione el juego
+# game loop
 game = True
 finish = False
 clock = time.Clock()
@@ -134,25 +142,18 @@ FPS = 60
 while game:
     for e in event.get():
         if e.type == QUIT:
-           game = False
+            game = False
         
-    if e.type == KEYDOWN:
-        if e.key == K_SPACE:
-            #para comprobar cuantas balas he disparado
-            if num_fire < 5 and rel_time == False:
-                num_fire = num_fire + 1
+        if e.type == KEYDOWN:
+            if e.key == K_SPACE:
                 player.fire() 
 
-    if num_fire  >= 5 and rel_time == False : #si el jugador hizo 5 disparos
-                       last_time = timer() #registra el tiempo cuando esto sucedió
-                       rel_time = True #establece la bandera de reinicio
-
     if not finish:
-        #actualizando el fondo
-        window.blit(background, (0,0))
+        # updating the background
+        window.blit(background, (0, 0))
 
-        #creando el texto cuando pierdes
-        text_lose = font2.render("Fallados: " + str(lost), 1, (255, 255, 255))
+        # creating the text for when you lose
+        text_lose = font2.render("Enemies missed: " + str(lost), 1, (255, 255, 255))
         window.blit(text_lose, (10, 50))
 
         Bullets.draw(window)
@@ -165,37 +166,35 @@ while game:
         asteroids.update()
         player.update()
         
-
-        #comprueba la colision entre una bala y los mounstros
+        # check collision between bullet and enemies
         collides = sprite.groupcollide(Alien, Bullets, True, True)
         for c in collides:
-            #se repite tantas veces como se golpee con los enemigos
+            # repeated for each enemy hit
             score = score + 1
             enemy = Enemy(img_enemy, randint(80, win_width - 80), -40, 80, 80, randint(1, 2))
             Alien.add(enemy)
 
-        #comprueba la colision entre la otra bala y los mounstros
+        # check collision between bullet and asteroids
         collides1 = sprite.groupcollide(asteroids, Bullets, True, True)
         for c in collides1:
-            #se repite tantas veces como se golpee con los enemigos
             asteroid = Enemy(img_enemy, randint(30, win_width - 30), -40, 80, 50, randint(1, 7))
             asteroids.add(asteroid)
         
-        #derrota: entran muchos enemigos o el cohete se choca contra los enemigos
+        # defeat: too many enemies have entered or the spaceship collides with an enemy
         if sprite.spritecollide(player, Alien, True) or lost >= max_lost:
             finish = True
-            window.blit(lose, (320, 250))
+            window.blit(lose, lose_rect)
+        
+        # victory: spaceship has eliminated enough enemies
         if score >= goal:
             finish = True
-            window.blit(win, (320, 250))
-        #para que se escriba el texto en la pantalla
-        text = font2.render("Puntuaje: " + str(score), 1, (255, 255, 255))
+            window.blit(win, win_rect)
+        # render text on the screen
+        text = font2.render("Score: " + str(score), 1, (255, 255, 255))
         window.blit(text, (10, 20))
 
-        text_lose = font2.render("Fallados: " + str(lost), 1, (255, 255, 255))
+        text_lose = font2.render("Enemies missed: " + str(lost), 1, (255, 255, 255))
         window.blit(text_lose, (10, 50))
-        
-
 
     display.update()
     clock.tick(FPS)
